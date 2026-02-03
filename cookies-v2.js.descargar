@@ -1,0 +1,237 @@
+//$(document).ready(function () {
+var cookiesUser;
+var cookiesVersionOk = false;
+
+
+//CODIGO LIBRERIA
+
+var cookiesModule = $("#wb-co-cookiesgdpr_module");
+
+var cookiesIntroSection = $(".wb-co-cookiesgdpr__intro");
+var cookiesConfigSection = $(".wb-co-cookiesgdpr__configuration");
+
+//Definición de botones
+var btnAcceptCookies = $(".wb-co-cookiesgdpr__acceptbtn");
+var btnConfigCookies = $(".wb-co-cookiesgdpr__configbtn");
+var btnRejectCookies = $(".wb-co-cookiesgdpr__rejectbtn");
+var btnSaveCookies = $(".wb-co-cookiesgdpr__savebtn");
+var btnViewCookies = $(".wb-co-cookiesgdpr__viewcookies");
+var btnClosePopupCookies = $(".wb-co-cookiesgdpr__closebtn");
+//var btnOpenConfigCookies = $(".wb-co-cookiesgdpr__openconfig");
+
+//Acciones de botón
+btnAcceptCookies.click(function () {
+    acceptAllCookies();
+});
+
+btnConfigCookies.click(function () {
+    cookiesConfigDialogShow(true);
+});
+
+btnRejectCookies.click(function () {
+    rejectAllCookies();
+});
+
+btnSaveCookies.click(function () {
+    acceptConfigCookies();
+});
+btnViewCookies.click(function () {
+    var tipo = $(this).data("cookies-tipo");
+    $("#cookieslist_" + tipo).slideToggle();
+});
+btnClosePopupCookies.click(function () {
+    cookiesConfigDialogShow(false);
+});
+//btnOpenConfigCookies.click(function () {
+//    console.log("AbreConfig");
+//    cookiesConfigDialogShow(true);
+//});
+
+
+
+
+//Check cookies from JS Cookie
+function resetCookiesFromUserCookie(cookiesUser) {
+    if (!cookiesUser) return;
+    var gruposHtml = $(".wb-co-cookiesgdpr__tipo");
+    gruposHtml.each(function () {
+        var alias = getAliasFromCookiesContainer($(this));
+        var checked = false;
+        if (cookiesUser) {
+            for (var key in cookiesUser.CookiesUsuario) {
+                if (key == alias) {
+                    //console.log("Alias: " + alias + " Key: " + key + " Value: " + cookiesUser.CookiesUsuario[key]);
+                    checked = cookiesUser.CookiesUsuario[key];
+                }
+            }
+        }
+        activarDesactivarCheckBox(alias, checked);
+
+    });
+}
+
+function activarDesactivarCheckBox(alias, activar) {
+    //console.log("ActivarDesactivarCheckBox: " + alias + " : " + activar);
+
+    var campo = $("#tipo_" + alias);
+    if (campo.data("required")) return;
+    campo.prop("checked", activar);
+    var labelDiv = $(".tipocookies_status[data-alias='" + alias + "']");
+    if (activar) {
+        labelDiv.addClass("font-weight-bold");
+        labelDiv.text("Activado");
+    } else {
+        labelDiv.removeClass("font-weight-bold");
+        labelDiv.text("Desactivado");
+    }
+}
+
+function getAliasFromCookiesContainer(obj) {
+    if (obj) {
+        var checkbox = obj.find("input[type=checkbox]");
+        if (checkbox) {
+            var idtmp = checkbox.attr("id");
+            if (idtmp) {
+                var alias = idtmp.replace("tipo_", "");
+                return alias;
+            }
+        }
+    }
+}
+
+function cookiesShowRequiredDialog() {
+    $("body").addClass("showcookie");
+    cookiesModule.show();
+    btnClosePopupCookies.hide();
+    cookiesIntroSection.show();
+    cookiesConfigSection.hide();
+}
+
+function cookiesConfigDialogShow(openClose) {
+    //console.log("Abrir?: " + openClose);
+    if (!openClose) {
+        cookiesCloseDialog();
+        return;
+    }
+    $("body").addClass("showcookie");
+    cookiesModule.show();
+    if (cookiesVersionOk) btnClosePopupCookies.show();
+    cookiesIntroSection.hide();
+    cookiesConfigSection.show();
+}
+
+function cookiesInitModule(cookieVersionServer) {
+    cookiesUser = Cookies.getJSON("gdpr_cookies");
+    var cookiesVersionUser = cookiesUser ? cookiesUser.Version : null;
+    var cookiesVersionWeb = cookieVersionServer;
+    cookiesVersionOk = cookiesVersionUser == cookiesVersionWeb;
+    if (!cookiesVersionOk) {
+        cookiesUser = null;
+    }
+    if (cookiesUser) {
+        runScriptTags(cookiesUser);
+    }
+}
+
+function checkCookiesVersion() {
+    //SOLO TEST
+    var testCookieValues = { "Version": 1, "CookiesUsuario": { "tecnicas": true, "publicidad_comportamental": true, "youtube": false, "personalizacion": true } };
+    //cookiesUser = testCookieValues;
+    //SOLO TEST
+    resetCookiesFromUserCookie(cookiesUser);
+    if (!cookiesVersionOk) {
+        cookiesShowRequiredDialog();
+    }
+}
+
+function cookiesCloseDialog() {
+    $("body").removeClass("showcookie");
+    cookiesModule.hide();
+    btnClosePopupCookies.hide();
+    cookiesIntroSection.hide();
+    cookiesConfigSection.hide();
+}
+
+//ACCIONES ACEPTAR COOKIES
+function acceptAllCookies() {
+    var $grupos = $('#aceptarAllCookiesForm :input[name=cookie_type]');
+    var grupos_values = {};
+    $grupos.each(function () {
+        grupos_values[$(this).val()] = true;
+    });
+    var tmpversion = $('#aceptarAllCookiesForm :input[name=cookie_version]').val();
+    setCookieAndReload(tmpversion, grupos_values);
+}
+
+//ACCIONES RECHAZAR COOKIES
+function rejectAllCookies() {
+    var grupos_values = {};
+    var tmpversion = $('#aceptarAllCookiesForm :input[name=cookie_version]').val();
+    setCookieAndReload(tmpversion, grupos_values);
+}
+
+function acceptConfigCookies() {
+    var $grupos = $('#aceptarCustomCookiesForm :input');
+    var grupos_values = {};
+    $grupos.each(function () {
+        if ($(this).hasClass("tipocookies_check")) {
+            var alias = this.name.replace("tipo_", "");
+            grupos_values[alias] = $(this).prop('checked');
+        }
+    });
+    var tmpversion = $('#aceptarCustomCookiesForm :input[name=cookie_version]').val();
+    setCookieAndReload(tmpversion, grupos_values);
+}
+
+function setCookieAndReload(tmpversion, grupos_values) {
+    var cookieEnabled = (navigator.cookieEnabled) ? true : false;
+    cookiesCloseDialog();
+    if (cookieEnabled) {
+        var cookieValue = { "Version": tmpversion, "CookiesUsuario": grupos_values };
+        Cookies.set("gdpr_cookies", JSON.stringify(cookieValue), { expires: 1825 });
+        location.reload(true);
+    }
+}
+
+
+function runScriptTags(cookiesUser) {
+    $("script[type*=plain][data-wbcookiecategory]").each(function () {
+        var categoria = $(this).data("wbcookiecategory");
+        //console.log("SCRIPT => categoria: " + categoria + " valor: " + cookiesUser.CookiesUsuario[categoria]);
+
+        if (cookiesUser.CookiesUsuario[categoria]) {
+            var parentNode = this.parentNode;
+            var nextNode = this.nextElementSibling;
+            var newScript = cloneScriptTag(this);
+            parentNode.removeChild(this);
+            parentNode.insertBefore(newScript, nextNode || null);
+        }
+    });
+    $("img[data-wbcookiecategory]").each(function () {
+        var categoria = $(this).data("wbcookiecategory");
+        //console.log("IMG => categoria: " + categoria + " valor: " + cookiesUser.CookiesUsuario[categoria]);
+
+        if (cookiesUser.CookiesUsuario[categoria]) {
+            $(this).attr("src", $(this).attr("data-src"));
+        }
+    });
+    $("iframe[data-wbcookiecategory]").each(function () {
+        var categoria = $(this).data("wbcookiecategory");
+        //console.log("IFRAME => categoria: " + categoria + " valor: " + cookiesUser.CookiesUsuario[categoria]);
+
+        if (cookiesUser.CookiesUsuario[categoria]) {
+            $(this).attr("src", $(this).attr("data-src"));
+        }
+    });
+}
+
+function cloneScriptTag(sourceScript) {
+    var newScript = document.createElement("script");
+
+    for (var o = 0; o < sourceScript.attributes.length; o++) {
+        void 0 !== sourceScript.attributes[o].value && "" != sourceScript.attributes[o].value && newScript.setAttribute(sourceScript.attributes[o].name, sourceScript.attributes[o].value);
+    }
+    void 0 !== sourceScript.text && (newScript.text = sourceScript.text)
+    newScript.setAttribute("type", "text/javascript");
+    return newScript;
+}

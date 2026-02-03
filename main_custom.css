@@ -1,0 +1,9 @@
+@media (max-width: 768px) {
+    .MOD_05__slider__item {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .MOD_05__item__bodycopy .tae-amount {
+        font-size: 48px;
+    }
+}
